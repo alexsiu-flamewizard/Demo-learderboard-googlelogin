@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>馬里奧大冒險</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #070b14;
+      overflow: hidden;
+      font-family: "Press Start 2P", "Courier New", monospace;
+    }
+    #wrap {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      background: #000;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      background: #5c94fc;
+      touch-action: none;
+    }
+    #stats {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 3;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      padding: 12px 220px 14px 18px;
+      pointer-events: none;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.28) 70%, transparent 100%);
+      font-family: "Press Start 2P", ui-monospace, monospace;
+    }
+    .stat {
+      color: #fff;
+      text-align: center;
+      text-shadow:
+        3px 3px 0 #000,
+        -2px 0 0 #000,
+        2px 0 0 #000,
+        0 -2px 0 #000,
+        0 2px 0 #000;
+    }
+    .stat span {
+      display: block;
+      font-size: clamp(8px, 1.6vw, 12px);
+      color: #ffe14a;
+      letter-spacing: 1px;
+    }
+    .stat b {
+      display: block;
+      margin-top: 8px;
+      font-size: clamp(14px, 2.4vw, 20px);
+      font-weight: 400;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+    #banner {
+      position: absolute;
+      left: 50%;
+      top: 42%;
+      transform: translate(-50%, -50%);
+      z-index: 4;
+      display: none;
+      padding: 10px 16px;
+      border: 4px solid #f8d878;
+      background: #0f172a;
+      color: #ffe14a;
+      font-family: "Press Start 2P", monospace;
+      font-size: clamp(12px, 2vw, 18px);
+      text-shadow: 3px 3px 0 #000;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #banner.show { display: block; }
+    #hud {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    #overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(8, 24, 80, 0.18);
+      pointer-events: auto;
+      z-index: 5;
+    }
+    #overlay.hidden { display: none; }
+    .mario-frame {
+      width: min(640px, 94vw);
+      padding: 22px 18px 18px;
+      background: #5c94fc;
+      border: 8px solid #c2410c;
+      box-shadow:
+        0 0 0 4px #7c2d12,
+        0 0 0 10px #16a34a,
+        0 0 0 14px #14532d,
+        0 18px 0 #0b3d1a;
+      image-rendering: pixelated;
+    }
+    .mario-frame.board-frame {
+      width: min(1080px, 96vw);
+      max-height: min(90vh, 780px);
+      overflow: auto;
+      padding: 28px 32px 24px;
+    }
+    .mario-frame.options-frame {
+      width: min(720px, 94vw);
+    }
+    .mario-frame.board-frame .panel {
+      width: 100%;
+    }
+    .logo {
+      margin: 0 0 8px;
+      text-align: center;
+      font-size: clamp(18px, 4.2vw, 34px);
+      line-height: 1.25;
+      letter-spacing: 3px;
+    }
+    .logo span { display: inline-block; text-shadow: 3px 3px 0 #000; }
+    .c1 { color: #e52521; }
+    .c2 { color: #2563eb; }
+    .c3 { color: #facc15; }
+    .c4 { color: #22c55e; }
+    .c5 { color: #fb923c; }
+    .c6 { color: #fff; }
+    .menu-hint {
+      margin: 0 0 16px;
+      text-align: center;
+      color: #fff;
+      font-size: 9px;
+      text-shadow: 2px 2px 0 #000;
+    }
+    .menu-list { display: grid; gap: 12px; width: min(420px, 100%); margin: 0 auto; }
+    .menu-item {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px 14px 12px 42px;
+      border: 4px solid #7c2d12;
+      border-radius: 0;
+      background: #1d4ed8;
+      color: #fff;
+      font: 700 13px/1 "Press Start 2P", monospace;
+      text-align: left;
+      box-shadow: 0 4px 0 #0f172a;
+      letter-spacing: 1px;
+    }
+    .menu-item .cursor-ico {
+      position: absolute;
+      left: 10px;
+      font-size: 20px;
+      opacity: 0;
+    }
+    .menu-item.selected {
+      background: #1e3a8a;
+      color: #ffe14a;
+    }
+    .menu-item.selected .cursor-ico { opacity: 1; }
+    .menu-item.selected .label { animation: brickBump 0.35s ease; }
+    .qblock {
+      width: 22px;
+      height: 22px;
+      margin-right: 6px;
+      background: #facc15;
+      color: #78350f;
+      border: 2px solid #a16207;
+      display: inline-grid;
+      place-items: center;
+      font-size: 12px;
+    }
+    @keyframes brickBump {
+      0% { transform: translateY(0); }
+      40% { transform: translateY(-7px); }
+      100% { transform: translateY(0); }
+    }
+    .board-wrap { color: #fff; font-size: 13px; text-shadow: 2px 2px 0 #000; }
+    .board-wrap h2 {
+      margin: 0 0 18px;
+      text-align: center;
+      color: #ffe14a;
+      font-size: clamp(22px, 3.4vw, 34px);
+      letter-spacing: 2px;
+    }
+    .board-table { width: 100%; border-collapse: collapse; }
+    .board-table th, .board-table td {
+      padding: 14px 12px;
+      text-align: left;
+      border-bottom: 2px solid rgba(0,0,0,.25);
+      vertical-align: middle;
+    }
+    .board-table th { color: #ffe14a; font-size: 12px; }
+    .player-who {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .player-avatar {
+      width: 42px;
+      height: 42px;
+      object-fit: cover;
+      border: 3px solid #facc15;
+      background: #0ea5e9;
+      flex: none;
+      image-rendering: auto;
+    }
+    .player-avatar.fallback {
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 16px;
+    }
+    .player-name {
+      font-size: 13px;
+      line-height: 1.35;
+      letter-spacing: 0;
+      text-align: left;
+      overflow-wrap: anywhere;
+    }
+    .board-table tr.mine { background: rgba(250, 204, 21, 0.18); }
+    .board-table tr.clickable { cursor: pointer; }
+    .board-table tr.clickable:hover { background: rgba(255,255,255,.12); }
+    .player-detail {
+      display: none;
+      margin-top: 12px;
+      padding: 10px;
+      background: #1e3a8a;
+      border: 3px solid #facc15;
+      line-height: 1.8;
+      overflow-wrap: break-word;
+      word-break: normal;
+    }
+    .player-detail.show { display: block; }
+    .panel {
+      width: min(520px, 92vw);
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #fff;
+      text-align: center;
+      box-shadow: none;
+    }
+    .panel h1 {
+      margin: 0 0 10px;
+      font-size: clamp(18px, 4vw, 28px);
+      letter-spacing: 2px;
+      color: #ffe14a;
+      text-shadow: 3px 3px 0 #000;
+    }
+    .panel p { margin: 10px 0 0; line-height: 1.7; color: #fff; font-size: 11px; text-shadow: 2px 2px 0 #000; }
+    .panel .tiny { font-size: 9px; color: #dbeafe; }
+    .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+    button {
+      pointer-events: auto;
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font: 700 13px/1 "Courier New", monospace;
+      color: #fff;
+      background: #e52521;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #7f1d1d;
+    }
+    button.secondary { background: #2563eb; box-shadow: 0 4px 0 #1e3a8a; }
+    #pads {
+      display: none !important;
+      pointer-events: auto;
+      padding: 10px 12px 16px;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    #wrap.mobile-mode #pads { display: flex !important; }
+    #wrap.desktop-mode #pads,
+    #wrap:not(.mobile-mode) #pads { display: none !important; }
+    #wrap.mobile-mode .pad { width: 72px; height: 72px; }
+    .pad {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      border: 2px solid rgba(255,255,255,.35);
+      background: rgba(15,23,42,.55);
+      color: #fff;
+      font-size: 24px;
+      box-shadow: none;
+    }
+    .pad:active, .pad.held { background: rgba(37,99,235,.8); }
+    .option-grid { display: grid; gap: 10px; width: min(420px, 100%); margin: 12px auto 0; }
+    .option-choice {
+      width: 100%;
+      padding: 12px;
+      border: 4px solid #7c2d12;
+      border-radius: 0;
+      background: #1d4ed8;
+      color: #fff;
+      font: 700 12px/1.4 "Press Start 2P", monospace;
+      box-shadow: 0 4px 0 #0f172a;
+    }
+    .option-choice.on {
+      background: #1e3a8a;
+      color: #ffe14a;
+      border-color: #facc15;
+    }
+    .top-line {
+      margin: 14px auto 0;
+      width: min(420px, 100%);
+      color: #fff;
+      font-size: 9px;
+      text-align: center;
+      text-shadow: 2px 2px 0 #000;
+      letter-spacing: 1px;
+    }
+    @media (max-width: 720px) {
+      #stats { padding: 58px 12px 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="320" height="192"></canvas>
+    <div id="stats" style="display:none">
+      <div class="stat"><span>SCORE</span><b id="hudScore">000000</b></div>
+      <div class="stat"><span>COINS</span><b id="hudCoins">x00</b></div>
+      <div class="stat"><span>WORLD</span><b id="hudWorld">1-1</b></div>
+      <div class="stat"><span>TIME</span><b id="hudTime">400</b></div>
+    </div>
+    <div id="banner">COURSE CLEAR!</div>
+    <div id="hud">
+      <div></div>
+      <div id="pads" hidden>
+        <div style="display:flex;gap:8px">
+          <button class="pad" id="btnL">◀</button>
+          <button class="pad" id="btnR">▶</button>
+        </div>
+        <button class="pad" id="btnJ">A</button>
+      </div>
+    </div>
+    <div id="overlay">
+      <div class="mario-frame" id="marioFrame">
+        <div class="panel" id="panel"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const VIEW_W = 320, VIEW_H = 192, TILE = 16;
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const overlay = document.getElementById("overlay");
+    const panel = document.getElementById("panel");
+    const banner = document.getElementById("banner");
+    const JUMP_V = -6.8;
+    const GRAV_HOLD = 0.22;
+    const GRAV_FALL = 0.42;
+    const MOVE_ACC = 0.22;
+    const MOVE_MAX = 1.85;
+    ctx.imageSmoothingEnabled = false;
+
+    const KEY = {};
+    const PAD = { left: false, right: false, jump: false };
+    let audio;
+    function tone(freq, dur, type = "square", vol = 0.04) {
+      try {
+        if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+        if (audio.state === "suspended") audio.resume();
+        const o = audio.createOscillator();
+        const g = audio.createGain();
+        o.type = type;
+        o.frequency.value = freq;
+        g.gain.value = vol;
+        g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + dur);
+        o.connect(g).connect(audio.destination);
+        o.start();
+        o.stop(audio.currentTime + dur);
+      } catch (_) {}
+    }
+
+    function randInt(a, b) {
+      return a + Math.floor(Math.random() * (b - a + 1));
+    }
+
+    function generateLevel(worldIndex) {
+      const width = 66 + worldIndex * 6;
+      const map = Array.from({ length: 12 }, () => Array(width).fill("."));
+      for (let x = 0; x < width; x++) {
+        map[10][x] = "G";
+        map[11][x] = "D";
+      }
+      const gapCount = worldIndex === 0 ? 1 : 2;
+      for (let i = 0; i < gapCount; i++) {
+        const gx = 16 + i * Math.floor((width - 24) / gapCount) + randInt(0, 5);
+        const gw = worldIndex >= 2 ? randInt(2, 3) : 2;
+        if (gx > 10 && gx + gw < width - 10) {
+          for (let x = gx; x < gx + gw; x++) {
+            map[10][x] = ".";
+            map[11][x] = ".";
+          }
+        }
+      }
+      const isGap = (x) => x >= 0 && x < width && map[10][x] === ".";
+      const platformCount = 2 + worldIndex;
+      for (let i = 0; i < platformCount; i++) {
+        let px = 10 + randInt(0, width - 22);
+        for (let n = 0; n < 12 && (isGap(px) || isGap(px + 3)); n++) px = 10 + randInt(0, width - 22);
+        const len = randInt(3, 5);
+        for (let x = px; x < px + len && x < width - 8; x++) {
+          if (isGap(x)) continue;
+          const mushroom = worldIndex >= 1 && i === 0 && x === px + 1;
+          map[5][x] = mushroom ? "!" : (x === px + 1 || x === px + 2) ? "?" : "B";
+          if (Math.random() > 0.35) map[4][x] = "C";
+        }
+      }
+      let pipeX = 20 + randInt(0, width - 36);
+      for (let n = 0; n < 16 && (isGap(pipeX) || isGap(pipeX + 1) || pipeX < 10); n++) {
+        pipeX = 18 + randInt(0, width - 34);
+      }
+      map[7][pipeX] = "*";
+      map[8][pipeX] = "1";
+      map[8][pipeX + 1] = "2";
+      map[9][pipeX] = "1";
+      map[9][pipeX + 1] = "2";
+      const enemyCount = 1 + worldIndex;
+      for (let i = 0; i < enemyCount; i++) {
+        let ex = 26 + randInt(0, width - 38);
+        for (let n = 0; n < 12 && (isGap(ex) || Math.abs(ex - pipeX) < 3 || ex < 14); n++) {
+          ex = 26 + randInt(0, width - 38);
+        }
+        map[8][ex] = "E";
+      }
+      if (worldIndex >= 2) {
+        let zx = 32 + randInt(0, 18);
+        if (!isGap(zx) && Math.abs(zx - pipeX) > 3) map[7][zx] = "Z";
+      }
+      for (let i = 0; i < 2 + worldIndex; i++) {
+        const bx = 5 + randInt(0, width - 16);
+        if (!isGap(bx) && map[9][bx] === ".") map[9][bx] = Math.random() > 0.5 ? "O" : "R";
+      }
+      map[9][2] = "P";
+      map[9][width - 7] = "F";
+      map[9][width - 4] = "H";
+      return {
+        world: "1-" + (worldIndex + 1),
+        time: 400 - worldIndex * 50,
+        theme: ["overworld", "hills", "castle"][worldIndex],
+        map: map.map((row) => row.join("")),
+      };
+    }
+
+    let LEVELS = [generateLevel(0), generateLevel(1), generateLevel(2)];
+
+    const SOLID = new Set(["G", "D", "B", "?", "!", "=", "1", "2", "#"]);
+    let state = "title";
+    let levelIndex = 0;
+    let tiles = [];
+    let cols = 0, rows = 0;
+    let player, enemies, coins, items, particles, cannons, plants, decorations;
+    let cameraX = 0;
+    let score = 0, coinsGot = 0, lives = 3, timeLeft = 160, timeAcc = 0;
+    let invuln = 0, combo = 0, big = false;
+    let goal = null, flag = null;
+    let clearTimer = 0, deadTimer = 0;
+    let scorePosted = false;
+    let tick = 0;
+    let clouds = [];
+    let birds = [];
+    let menuIndex = 0;
+    const MENU_COUNT = 4;
+    localStorage.removeItem("mario-control-mode");
+    let controlMode = localStorage.getItem("mario-input-layout") === "mobile" ? "mobile" : "desktop";
+    let selectedBoardUid = "";
+    let currentUser = { uid: "", email: "", displayName: "", photoURL: "" };
+    let displayMode = "windowed";
+    let cloudBoard = null;
+    let scoreSaveNote = "";
+    const LB_KEY = "mario-adventure-leaderboard";
+
+    function bip() {
+      tone(880, 0.05, "square", 0.05);
+    }
+
+    function powerUp() {
+      [392, 523, 659, 784, 1046].forEach((freq, i) => {
+        setTimeout(() => tone(freq, 0.11, "square", 0.055), i * 70);
+      });
+    }
+
+    function playerTag() {
+      const src = (currentUser.displayName || currentUser.email || "PLAY")
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "");
+      return (src.slice(0, 4) || "PLAY").padEnd(4, "X");
+    }
+
+    function stageLabel() {
+      const world = LEVELS[Math.min(levelIndex, LEVELS.length - 1)]?.world || "1-1";
+      return "W" + world;
+    }
+
+    function loadBoard() {
+      if (Array.isArray(cloudBoard)) return cloudBoard;
+      try {
+        return JSON.parse(localStorage.getItem(LB_KEY) || "[]");
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function saveBoardEntry() {
+      let list = [];
+      try {
+        list = JSON.parse(localStorage.getItem(LB_KEY) || "[]");
+      } catch (_) {
+        list = [];
+      }
+      const uid = currentUser.uid || "local-" + playerTag();
+      const entry = {
+        uid,
+        email: currentUser.email || "",
+        displayName: currentUser.displayName || "",
+        photoURL: currentUser.photoURL || "",
+        tag: playerTag(),
+        score,
+        stage: stageLabel(),
+        at: Date.now(),
+      };
+      const idx = list.findIndex((item) => item.uid === uid);
+      if (idx >= 0) {
+        if (score >= list[idx].score) list[idx] = { ...list[idx], ...entry };
+      } else {
+        list.push(entry);
+      }
+      list.sort((a, b) => b.score - a.score);
+      localStorage.setItem(LB_KEY, JSON.stringify(list.slice(0, 20)));
+    }
+
+    function requestUser() {
+      try {
+        window.parent.postMessage({ type: "REQUEST_USER" }, "*");
+      } catch (_) {}
+    }
+
+    function requestBoard() {
+      try {
+        window.parent.postMessage({ type: "REQUEST_LEADERBOARD" }, "*");
+      } catch (_) {}
+    }
+
+    function requestLogin() {
+      try {
+        window.parent.postMessage({ type: "REQUEST_LOGIN" }, "*");
+      } catch (_) {}
+    }
+
+    function applyUser(data) {
+      currentUser = {
+        uid: data.uid || "",
+        email: data.email || "",
+        displayName: data.displayName || "",
+        photoURL: data.photoURL || "",
+      };
+      if (state === "leaderboard") show(boardHTML());
+      if (state === "title") show(titleHTML());
+      if (state === "gameover") show(overHTML());
+      if (state === "victory") show(winHTML());
+    }
+
+    window.addEventListener("message", (event) => {
+      const data = event.data;
+      if (!data || typeof data !== "object") return;
+      if (data.type === "USER_INFO") {
+        applyUser(data);
+        return;
+      }
+      if (data.type === "LEADERBOARD" && Array.isArray(data.entries)) {
+        cloudBoard = data.entries.map((entry) => ({
+          uid: entry.uid || "",
+          email: entry.email || "",
+          displayName: entry.displayName || "",
+          photoURL: entry.photoURL || "",
+          tag: entry.tag || playerTagFrom(entry.displayName, entry.email),
+          score: Number(entry.score) || 0,
+          stage: entry.stage || "W1-1",
+        }));
+        if (state === "leaderboard") show(boardHTML());
+        if (state === "title") show(titleHTML());
+        return;
+      }
+      if (data.type === "SCORE_RESULT") {
+        scoreSaveNote = data.ok
+          ? "SAVED TO GOOGLE LEADERBOARD"
+          : data.reason === "login"
+            ? "SIGN IN TOP-RIGHT TO SAVE YOUR SCORE"
+            : "SCORE NOT SAVED";
+        if (state === "gameover") show(overHTML());
+        if (state === "victory") show(winHTML());
+        return;
+      }
+      if (data.type === "DISPLAY_MODE") {
+        displayMode = data.mode === "fullscreen" ? "fullscreen" : "windowed";
+        if (state === "options") show(optionsHTML());
+      }
+    });
+    requestUser();
+    requestBoard();
+    requestDisplayMode();
+    try {
+      const parentDoc = window.parent.document;
+      const onFs = () => {
+        displayMode = parentDoc.fullscreenElement || parentDoc.webkitFullscreenElement ? "fullscreen" : "windowed";
+        if (state === "options") show(optionsHTML());
+      };
+      parentDoc.addEventListener("fullscreenchange", onFs);
+      parentDoc.addEventListener("webkitfullscreenchange", onFs);
+    } catch (_) {}
+
+    function playerTagFrom(name, email) {
+      const src = String(name || email || "PLAY")
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "");
+      return (src.slice(0, 4) || "PLAY").padEnd(4, "X");
+    }
+
+    function sendScore(finalScore) {
+      const value = Math.max(0, Math.floor(finalScore));
+      try {
+        window.parent.postMessage({
+          type: "GAME_SCORE",
+          score: value,
+          stage: stageLabel(),
+        }, "*");
+      } catch (_) {}
+    }
+
+    function postOnce() {
+      if (scorePosted) return;
+      scorePosted = true;
+      scoreSaveNote = currentUser.uid ? "SAVING TO GOOGLE LEADERBOARD..." : "SIGN IN TOP-RIGHT TO SAVE YOUR SCORE";
+      saveBoardEntry();
+      sendScore(score);
+    }
+
+    function addScore(n) {
+      score += n;
+      updateHud();
+    }
+
+    function updateHud() {
+      const spec = LEVELS[Math.min(levelIndex, LEVELS.length - 1)];
+      document.getElementById("hudScore").textContent = String(score).padStart(6, "0");
+      document.getElementById("hudCoins").textContent = "x" + String(coinsGot).padStart(2, "0");
+      document.getElementById("hudWorld").textContent = spec.world;
+      document.getElementById("hudTime").textContent = String(Math.max(0, timeLeft)).padStart(3, "0");
+      banner.classList.toggle("show", state === "clear");
+      const playing = state === "playing" || state === "clear" || state === "dead";
+      document.getElementById("stats").style.display = playing ? "grid" : "none";
+    }
+
+    function rnd(a, b) {
+      return a + Math.random() * (b - a);
+    }
+
+    function parseLevel(spec) {
+      tiles = spec.map.map((row) => row.replace(/ /g, ".").split(""));
+      rows = tiles.length;
+      cols = Math.max(...tiles.map((r) => r.length));
+      tiles.forEach((r) => {
+        while (r.length < cols) r.push(".");
+      });
+      enemies = [];
+      coins = [];
+      items = [];
+      particles = [];
+      cannons = [];
+      plants = [];
+      decorations = [];
+      goal = null;
+      flag = null;
+      player = { x: 24, y: 0, w: 10, h: 14, vx: 0, vy: 0, dir: 1, onGround: false, frame: 0, dead: false, coyote: 0, jumpBuf: 0, jumping: false };
+      big = false;
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const ch = tiles[y][x];
+          const px = x * TILE, py = y * TILE;
+          if (ch === "P") {
+            player.x = px + 3;
+            player.y = py + 2;
+            tiles[y][x] = ".";
+          } else if (ch === "C") {
+            coins.push({ x: px + 4, y: py + 3, w: 8, h: 10, taken: false, spin: rnd(0, Math.PI) });
+            tiles[y][x] = ".";
+          } else if (ch === "E") {
+            enemies.push({ type: "goomba", x: px + 1, y: py + 4, w: 14, h: 12, vx: -0.32, alive: true, squash: 0 });
+            tiles[y][x] = ".";
+          } else if (ch === "*") {
+            plants.push({ x: px + 10, y: py + 8, homeY: py + 18, w: 12, h: 16, phase: rnd(0, Math.PI * 2), hurt: true });
+            tiles[y][x] = ".";
+          } else if (ch === "Z") {
+            cannons.push({ x: px, y: py, cool: rnd(40, 120) });
+          } else if (ch === "F") {
+            flag = { x: px + 6, y: py - 64, w: 8, h: 80 };
+            tiles[y][x] = ".";
+          } else if (ch === "H") {
+            goal = { x: px - 8, y: py - 48, w: 48, h: 64 };
+            tiles[y][x] = ".";
+          } else if (ch === "O" || ch === "R") {
+            decorations.push({ type: ch, x: px, y: py });
+            tiles[y][x] = ".";
+          }
+        }
+      }
+      if (!flag && goal) flag = { x: goal.x - 18, y: goal.y, w: 8, h: 80 };
+      timeLeft = spec.time;
+      timeAcc = 0;
+      invuln = 0;
+      combo = 0;
+      clearTimer = 0;
+      deadTimer = 0;
+      cameraX = 0;
+      clouds = Array.from({ length: 8 }, (_, i) => ({
+        x: i * 90 + rnd(0, 40),
+        y: 36 + (i % 4) * 14,
+        s: 0.6 + (i % 3) * 0.25,
+        v: 0.08 + (i % 3) * 0.04,
+        layer: i % 3
+      }));
+      birds = Array.from({ length: 3 }, (_, i) => ({
+        x: 40 + i * 80,
+        y: 20 + i * 10,
+        v: 0.35 + i * 0.1,
+        flap: i
+      }));
+    }
+
+    function tileAt(tx, ty) {
+      if (ty < 0 || ty >= rows || tx < 0 || tx >= cols) return ty >= rows ? "D" : ".";
+      return tiles[ty][tx];
+    }
+
+    function isSolid(ch) {
+      return SOLID.has(ch);
+    }
+
+    function overlaps(a, b) {
+      return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+    }
+
+    function resolve(axis) {
+      const x0 = Math.floor(player.x / TILE);
+      const y0 = Math.floor(player.y / TILE);
+      const x1 = Math.floor((player.x + player.w - 0.01) / TILE);
+      const y1 = Math.floor((player.y + player.h - 0.01) / TILE);
+      for (let ty = y0; ty <= y1; ty++) {
+        for (let tx = x0; tx <= x1; tx++) {
+          const ch = tileAt(tx, ty);
+          if (!isSolid(ch)) continue;
+          const rx = tx * TILE, ry = ty * TILE;
+          if (axis === "x") {
+            if (player.vx > 0) player.x = rx - player.w;
+            else if (player.vx < 0) player.x = rx + TILE;
+            player.vx = 0;
+          } else {
+            if (player.vy > 0) {
+              player.y = ry - player.h;
+              player.vy = 0;
+              player.onGround = true;
+              combo = 0;
+            } else if (player.vy < 0) {
+              player.y = ry + TILE;
+              player.vy = 0.4;
+              player.jumping = false;
+              bump(tx, ty, ch);
+            }
+          }
+        }
+      }
+    }
+
+    function spawnCoinBurst(x, y) {
+      for (let i = 0; i < 6; i++) {
+        particles.push({
+          x, y, vx: rnd(-1.2, 1.2), vy: rnd(-3, -1), life: 24, color: "#facc15", size: 2
+        });
+      }
+    }
+
+    function bump(tx, ty, ch) {
+      if (ch === "?" || ch === "!") {
+        tiles[ty][tx] = "=";
+        const x = tx * TILE, y = ty * TILE;
+        spawnCoinBurst(x + 8, y);
+        if (ch === "!") {
+          items.push({ type: "mushroom", x: x + 1, y: y - 16, w: 14, h: 14, vx: 0.5, vy: 0 });
+          tone(320, 0.08);
+          tone(520, 0.12);
+        } else {
+          coinsGot += 1;
+          addScore(200);
+          tone(880, 0.07);
+          tone(1320, 0.08);
+        }
+      } else if (ch === "B" && big) {
+        tiles[ty][tx] = ".";
+        spawnCoinBurst(tx * TILE + 8, ty * TILE + 8);
+        addScore(50);
+        tone(180, 0.08, "sawtooth");
+      } else {
+        tone(140, 0.05, "triangle", 0.03);
+      }
+    }
+
+    function killPlayer() {
+      if (invuln > 0 || player.dead || state !== "playing") return;
+      if (big) {
+        big = false;
+        player.h = 14;
+        invuln = 120;
+        tone(200, 0.12);
+        return;
+      }
+      player.dead = true;
+      player.vy = -5;
+      player.vx = 0;
+      deadTimer = 90;
+      lives -= 1;
+      state = "dead";
+      tone(180, 0.2, "sawtooth");
+      tone(120, 0.35, "sawtooth");
+    }
+
+    function burst(x, y, color) {
+      for (let i = 0; i < 8; i++) {
+        particles.push({ x, y, vx: rnd(-1.6, 1.6), vy: rnd(-3.2, -0.4), life: 28, color, size: 2 });
+      }
+    }
+
+    function show(html) {
+      overlay.classList.remove("hidden");
+      const frame = document.getElementById("marioFrame");
+      frame?.classList.toggle("board-frame", state === "leaderboard");
+      frame?.classList.toggle("options-frame", state === "options");
+      panel.innerHTML = html;
+      bindPanel();
+    }
+
+    function hideOverlay() {
+      overlay.classList.add("hidden");
+    }
+
+    function topScore() {
+      return loadBoard()[0]?.score || 0;
+    }
+
+    function applyControlMode() {
+      const wrap = document.getElementById("wrap");
+      const pads = document.getElementById("pads");
+      const isMobile = controlMode === "mobile";
+      wrap.classList.toggle("mobile-mode", isMobile);
+      wrap.classList.toggle("desktop-mode", !isMobile);
+      if (pads) {
+        pads.hidden = !isMobile;
+        pads.style.setProperty("display", isMobile ? "flex" : "none", "important");
+      }
+      localStorage.setItem("mario-input-layout", controlMode);
+    }
+
+    function titleHTML() {
+      const sel = (i) => (menuIndex === i ? "selected" : "");
+      return `
+        <div class="logo">
+          <span class="c1">S</span><span class="c2">U</span><span class="c3">P</span><span class="c4">E</span><span class="c5">R</span>
+          <br />
+          <span class="c1">M</span><span class="c2">A</span><span class="c3">R</span><span class="c4">I</span><span class="c5">O</span>
+        </div>
+        <p class="menu-hint">↑ ↓ 選單　ENTER / 空白鍵 確定</p>
+        <p class="menu-hint">GOOGLE LOGIN ↗ 右上角　登入後計入龍虎榜</p>
+        <div class="menu-list">
+          <button class="menu-item ${sel(0)}" id="btnStart" type="button" data-index="0">
+            <span class="cursor-ico">🍄</span>
+            <span class="qblock">?</span>
+            <span class="label">NEW GAME</span>
+          </button>
+          <button class="menu-item ${sel(1)}" id="btnBoard" type="button" data-index="1">
+            <span class="cursor-ico">🍄</span>
+            <span class="label">LEADERBOARD</span>
+          </button>
+          <button class="menu-item ${sel(2)}" id="btnOptions" type="button" data-index="2">
+            <span class="cursor-ico">🍄</span>
+            <span class="label">OPTIONS</span>
+          </button>
+          <button class="menu-item ${sel(3)}" id="btnQuit" type="button" data-index="3">
+            <span class="cursor-ico">🍄</span>
+            <span class="label">QUIT</span>
+          </button>
+        </div>
+        <p class="top-line">TOP - ${String(topScore()).padStart(6, "0")}</p>
+      `;
+    }
+
+    function optionsHTML() {
+      return `
+        <h1>OPTIONS</h1>
+        <p>CONTROL MODE</p>
+        <div class="option-grid">
+          <button class="option-choice ${controlMode === "desktop" ? "on" : ""}" id="btnDesktop" type="button">
+            DESKTOP<br>電腦版
+          </button>
+          <button class="option-choice ${controlMode === "mobile" ? "on" : ""}" id="btnMobile" type="button">
+            MOBILE<br>手機版
+          </button>
+        </div>
+        <p>DISPLAY MODE</p>
+        <div class="option-grid">
+          <button class="option-choice ${displayMode === "fullscreen" ? "on" : ""}" id="btnFullscreen" type="button">
+            FULLSCREEN<br>全屏模式
+          </button>
+          <button class="option-choice ${displayMode === "windowed" ? "on" : ""}" id="btnWindowed" type="button">
+            WINDOWED<br>窗口模式
+          </button>
+        </div>
+        <p class="menu-hint" style="margin-top:14px">電腦版：鍵盤，沒有螢幕按鍵<br>手機版：顯示 ◀ ▶ 與 A 跳躍</p>
+        <div class="row">
+          <button id="btnMenu">BACK</button>
+        </div>
+      `;
+    }
+
+    function pauseHTML() {
+      return `
+        <h1>PAUSE</h1>
+        <p>SCORE ${String(score).padStart(6, "0")}</p>
+        <div class="row">
+          <button id="btnResume">CONTINUE</button>
+          <button class="secondary" id="btnMenu">MENU</button>
+        </div>
+      `;
+    }
+
+    function scoreNoteHTML() {
+      if (!scoreSaveNote) return "";
+      return `<p class="tiny">${scoreSaveNote}</p>`;
+    }
+
+    function winHTML() {
+      return `
+        <h1>COURSE CLEAR</h1>
+        <p>SCORE ${String(score).padStart(6, "0")}</p>
+        ${scoreNoteHTML()}
+        <div class="row">
+          <button id="btnAgain">NEW GAME</button>
+          <button class="secondary" id="btnMenu">MENU</button>
+        </div>
+      `;
+    }
+
+    function overHTML() {
+      return `
+        <h1>GAME OVER</h1>
+        <p>SCORE ${String(score).padStart(6, "0")}</p>
+        ${scoreNoteHTML()}
+        <div class="row">
+          <button id="btnAgain">NEW GAME</button>
+          <button class="secondary" id="btnMenu">MENU</button>
+        </div>
+      `;
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function playerCellHTML(entry) {
+      const name = entry.displayName || entry.email || entry.tag || "PLAYER";
+      const initial = String(name).trim().charAt(0).toUpperCase() || "P";
+      const avatar = entry.photoURL
+        ? `<img class="player-avatar" src="${escapeHtml(entry.photoURL)}" alt="" referrerpolicy="no-referrer">`
+        : `<span class="player-avatar fallback">${escapeHtml(initial)}</span>`;
+      return `
+        <span class="player-who">
+          ${avatar}
+          <span class="player-name">${escapeHtml(name)}</span>
+        </span>
+      `;
+    }
+
+    function boardHTML() {
+      const list = loadBoard();
+      const icons = ["⭐", "🔥", "🍄"];
+      const myUid = currentUser.uid || "local-" + playerTag();
+      const rows = list.length
+        ? list.map((entry, i) => {
+            const mine = entry.uid === myUid || (currentUser.email && entry.email === currentUser.email);
+            const icon = icons[i] || String(i + 1).padStart(2, "0");
+            return `
+              <tr class="${mine ? "mine clickable" : "clickable"}" data-uid="${entry.uid}">
+                <td>${icon} ${String(i + 1).padStart(2, "0")}</td>
+                <td>${playerCellHTML(entry)}</td>
+                <td>${String(entry.score).padStart(6, "0")}</td>
+                <td>${entry.stage || "W1-1"}</td>
+              </tr>
+            `;
+          }).join("")
+        : `<tr><td colspan="4">NO RECORDS YET</td></tr>`;
+      const selected = list.find((entry) => entry.uid === selectedBoardUid);
+      const mineSelected = selected && (selected.uid === myUid || selected.email === currentUser.email);
+      return `
+        <div class="board-wrap">
+          <h2>LEADERBOARD</h2>
+          <table class="board-table">
+            <thead>
+              <tr><th>RANK</th><th>PLAYER</th><th>SCORE</th><th>STAGE</th></tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="player-detail show" id="playerDetail">
+            ${
+              !currentUser.uid
+                ? "SIGN IN TOP-RIGHT WITH GOOGLE TO SAVE YOUR SCORE"
+                : mineSelected
+                  ? `GMAIL ${escapeHtml(selected.email || "(not signed in)")}<br>NAME ${escapeHtml(selected.displayName || selected.tag)}<br>SCORE ${String(selected.score).padStart(6, "0")}<br>STAGE ${escapeHtml(selected.stage)}`
+                  : selected
+                    ? "THIS IS NOT YOUR RECORD"
+                    : "CLICK YOUR ROW TO SHOW GMAIL + SCORE"
+            }
+          </div>
+          <div class="row">
+            ${currentUser.uid ? "" : `<button id="btnSignIn">SIGN IN</button>`}
+            <button id="btnMenu">BACK</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function setControlMode(mode) {
+      controlMode = mode;
+      applyControlMode();
+      bip();
+      if (state === "options") show(optionsHTML());
+    }
+
+    function requestDisplayMode() {
+      try {
+        window.parent.postMessage({ type: "REQUEST_DISPLAY_MODE" }, "*");
+      } catch (_) {}
+    }
+
+    function setDisplayMode(mode) {
+      displayMode = mode === "fullscreen" ? "fullscreen" : "windowed";
+      bip();
+      try {
+        const parentDoc = window.parent && window.parent !== window ? window.parent.document : document;
+        const root = parentDoc.querySelector(".mario-hub") || parentDoc.documentElement;
+        if (displayMode === "fullscreen") {
+          const request = root.requestFullscreen || root.webkitRequestFullscreen;
+          if (request) request.call(root);
+        } else {
+          const exit = parentDoc.exitFullscreen || parentDoc.webkitExitFullscreen;
+          if (exit && (parentDoc.fullscreenElement || parentDoc.webkitFullscreenElement)) {
+            exit.call(parentDoc);
+          }
+        }
+      } catch (_) {
+        try {
+          window.parent.postMessage({ type: "SET_DISPLAY_MODE", mode: displayMode }, "*");
+        } catch (__) {}
+      }
+      if (state === "options") show(optionsHTML());
+    }
+
+    function openOptions() {
+      state = "options";
+      bip();
+      requestDisplayMode();
+      show(optionsHTML());
+      updateHud();
+    }
+
+    function quitToHome() {
+      bip();
+      showTitle();
+    }
+
+    function bindPanel() {
+      const startBtn = document.getElementById("btnStart");
+      const boardBtn = document.getElementById("btnBoard");
+      startBtn?.addEventListener("click", confirmNewGame);
+      boardBtn?.addEventListener("click", openBoard);
+      document.getElementById("btnOptions")?.addEventListener("click", openOptions);
+      document.getElementById("btnQuit")?.addEventListener("click", quitToHome);
+      document.getElementById("btnSignIn")?.addEventListener("click", requestLogin);
+      document.getElementById("btnDesktop")?.addEventListener("click", () => setControlMode("desktop"));
+      document.getElementById("btnMobile")?.addEventListener("click", () => setControlMode("mobile"));
+      document.getElementById("btnFullscreen")?.addEventListener("click", () => setDisplayMode("fullscreen"));
+      document.getElementById("btnWindowed")?.addEventListener("click", () => setDisplayMode("windowed"));
+      panel.querySelectorAll(".menu-item").forEach((btn) => {
+        btn.addEventListener("mouseenter", () => {
+          if (state !== "title") return;
+          const index = Number(btn.getAttribute("data-index"));
+          if (Number.isNaN(index) || index === menuIndex) return;
+          menuIndex = index;
+          bip();
+          panel.querySelectorAll(".menu-item").forEach((item) => item.classList.remove("selected"));
+          btn.classList.add("selected");
+        });
+      });
+      document.getElementById("btnResume")?.addEventListener("click", () => {
+        state = "playing";
+        hideOverlay();
+        updateHud();
+      });
+      document.getElementById("btnAgain")?.addEventListener("click", confirmNewGame);
+      document.getElementById("btnMenu")?.addEventListener("click", showTitle);
+      document.getElementById("btnSubmit")?.addEventListener("click", () => sendScore(score));
+      panel.querySelectorAll("tr.clickable").forEach((row) => {
+        row.addEventListener("click", () => {
+          selectedBoardUid = row.getAttribute("data-uid") || "";
+          bip();
+          show(boardHTML());
+        });
+      });
+    }
+
+    function showTitle() {
+      state = "title";
+      menuIndex = 0;
+      selectedBoardUid = "";
+      show(titleHTML());
+      updateHud();
+    }
+
+    function openBoard() {
+      state = "leaderboard";
+      bip();
+      requestBoard();
+      show(boardHTML());
+      updateHud();
+    }
+
+    function confirmNewGame() {
+      menuIndex = 0;
+      powerUp();
+      startGame();
+    }
+
+    function startGame() {
+      score = 0;
+      coinsGot = 0;
+      lives = 3;
+      levelIndex = 0;
+      scorePosted = false;
+      scoreSaveNote = "";
+      LEVELS = [generateLevel(0), generateLevel(1), generateLevel(2)];
+      parseLevel(LEVELS[0]);
+      state = "playing";
+      invuln = 90;
+      banner.classList.remove("show");
+      updateHud();
+      hideOverlay();
+    }
+
+    function nextLevel() {
+      addScore(1000 + timeLeft * 10);
+      levelIndex += 1;
+      if (levelIndex >= LEVELS.length) {
+        state = "victory";
+        postOnce();
+        show(winHTML());
+        tone(523, 0.1);
+        tone(659, 0.1);
+        tone(784, 0.12);
+        tone(1046, 0.2);
+        return;
+      }
+      parseLevel(LEVELS[levelIndex]);
+      state = "playing";
+      invuln = 40;
+    }
+
+    function update() {
+      tick += 1;
+      clouds.forEach((c) => {
+        c.x += c.v;
+        const width = cols * TILE;
+        if (c.x - cameraX * (0.15 + c.layer * 0.12) > width + 40) c.x -= width + 80;
+      });
+      birds.forEach((b) => {
+        b.x += b.v;
+        b.flap += 0.2;
+        if (b.x > cols * TILE + 20) {
+          b.x = -20;
+          b.y = 12 + Math.random() * 40;
+        }
+      });
+
+      if (state !== "playing") {
+        if (state === "dead") {
+          player.vy += 0.28;
+          player.y += player.vy;
+          deadTimer -= 1;
+          if (deadTimer <= 0) {
+            if (lives <= 0) {
+              state = "gameover";
+              postOnce();
+              show(overHTML());
+            } else {
+              parseLevel(LEVELS[levelIndex]);
+              state = "playing";
+              invuln = 80;
+            }
+          }
+        }
+        if (state === "clear") {
+          clearTimer -= 1;
+          if (clearTimer <= 0) nextLevel();
+        }
+        return;
+      }
+
+      timeAcc += 1;
+      if (timeAcc >= 60) {
+        timeAcc = 0;
+        timeLeft -= 1;
+        updateHud();
+        if (timeLeft <= 0) killPlayer();
+      }
+      if (invuln > 0) invuln -= 1;
+
+      const left = KEY.ArrowLeft || KEY.KeyA || PAD.left;
+      const right = KEY.ArrowRight || KEY.KeyD || PAD.right;
+      const jump = KEY.Space || KEY.ArrowUp || KEY.KeyW || PAD.jump;
+      if (left && !right) {
+        player.vx -= MOVE_ACC;
+        player.dir = -1;
+      } else if (right && !left) {
+        player.vx += MOVE_ACC;
+        player.dir = 1;
+      } else {
+        player.vx *= 0.76;
+      }
+      if (player.vx > MOVE_MAX) player.vx = MOVE_MAX;
+      if (player.vx < -MOVE_MAX) player.vx = -MOVE_MAX;
+
+      player.coyote = player.onGround ? 10 : Math.max(0, player.coyote - 1);
+      player.jumpBuf = jump ? 8 : Math.max(0, player.jumpBuf - 1);
+      if (player.jumpBuf > 0 && player.coyote > 0) {
+        player.vy = JUMP_V;
+        player.onGround = false;
+        player.coyote = 0;
+        player.jumpBuf = 0;
+        player.jumping = true;
+        tone(520, 0.08, "square", 0.035);
+      }
+      if (!jump && player.jumping && player.vy < 0) {
+        player.vy *= 0.48;
+        player.jumping = false;
+      }
+
+      player.h = big ? 22 : 14;
+      player.x += player.vx;
+      resolve("x");
+      player.vy += player.vy < 0 && jump ? GRAV_HOLD : GRAV_FALL;
+      if (player.vy > 6.2) player.vy = 6.2;
+      player.onGround = false;
+      player.y += player.vy;
+      resolve("y");
+      if (player.onGround) player.jumping = false;
+      if (player.y < 12) {
+        player.y = 12;
+        if (player.vy < 0) player.vy = 0;
+      }
+      if (Math.abs(player.vx) > 0.2 && player.onGround) player.frame += 0.25;
+      if (player.y > rows * TILE + 20) killPlayer();
+      if (player.x < 0) player.x = 0;
+
+      coins.forEach((c) => {
+        if (c.taken) return;
+        c.spin += 0.12;
+        if (overlaps(player, c)) {
+          c.taken = true;
+          coinsGot += 1;
+          addScore(100);
+          spawnCoinBurst(c.x, c.y);
+          tone(980, 0.06);
+        }
+      });
+
+      items.forEach((it) => {
+        if (it.taken) return;
+        it.vy += 0.2;
+        it.x += it.vx;
+        it.y += it.vy;
+        const below = tileAt(Math.floor((it.x + 7) / TILE), Math.floor((it.y + it.h) / TILE));
+        if (isSolid(below)) {
+          it.y = Math.floor((it.y + it.h) / TILE) * TILE - it.h;
+          it.vy = 0;
+        }
+        const side = tileAt(Math.floor((it.x + (it.vx > 0 ? it.w : 0)) / TILE), Math.floor((it.y + 8) / TILE));
+        if (isSolid(side)) it.vx *= -1;
+        if (overlaps(player, it)) {
+          it.taken = true;
+          big = true;
+          addScore(1000);
+          tone(400, 0.1);
+          tone(600, 0.12);
+        }
+      });
+
+      enemies.forEach((e) => {
+        if (!e.alive) {
+          if (e.squash > 0) e.squash -= 1;
+          return;
+        }
+        if (e.type === "bullet") {
+          e.x += e.vx;
+          if (e.x < cameraX - 40) e.alive = false;
+        } else {
+          e.vy = (e.vy || 0) + 0.28;
+          if (e.vy > 4.5) e.vy = 4.5;
+          e.y += e.vy;
+          const gx = Math.floor((e.x + e.w / 2) / TILE);
+          const gy = Math.floor((e.y + e.h) / TILE);
+          if (isSolid(tileAt(gx, gy))) {
+            e.y = gy * TILE - e.h;
+            e.vy = 0;
+          }
+          e.x += e.vx;
+          const front = e.vx > 0 ? e.x + e.w : e.x;
+          const ground = tileAt(Math.floor(front / TILE), Math.floor((e.y + e.h + 1) / TILE));
+          const wall = tileAt(Math.floor(front / TILE), Math.floor((e.y + 6) / TILE));
+          if (!isSolid(ground) || isSolid(wall)) e.vx *= -1;
+        }
+        if (!overlaps(player, e) || player.dead) return;
+        const stomp = player.vy > 0 && player.y + player.h - e.y < 10;
+        if (stomp) {
+          e.alive = false;
+          e.squash = 18;
+          player.vy = -3.8;
+          combo += 1;
+          addScore(200 * combo);
+          burst(e.x + 7, e.y + 4, "#b45309");
+          tone(240, 0.07);
+          tone(420, 0.08);
+        } else {
+          killPlayer();
+        }
+      });
+
+      plants.forEach((p) => {
+        p.phase += 0.03;
+        const rise = Math.sin(p.phase);
+        p.y = p.homeY - Math.max(0, rise) * 18;
+        p.hurt = rise > 0.15;
+        if (p.hurt && overlaps(player, p)) killPlayer();
+      });
+
+      cannons.forEach((c) => {
+        c.cool -= 1;
+        if (c.cool <= 0) {
+          c.cool = 110;
+          enemies.push({ type: "bullet", x: c.x - 12, y: c.y + 2, w: 16, h: 12, vx: -1.35, alive: true, squash: 0 });
+          tone(90, 0.08, "sawtooth", 0.03);
+        }
+      });
+
+      particles.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.12;
+        p.life -= 1;
+      });
+      particles = particles.filter((p) => p.life > 0);
+
+      const goalBox = flag || goal;
+      if (goalBox && overlaps(player, { x: goalBox.x, y: goalBox.y, w: 20, h: goalBox.h || 64 })) {
+        state = "clear";
+        clearTimer = 90;
+        player.vx = 0;
+        tone(523, 0.1);
+        tone(784, 0.18);
+      }
+
+      const target = player.x - VIEW_W * 0.38;
+      cameraX += (target - cameraX) * 0.12;
+      cameraX = Math.max(0, Math.min(cameraX, cols * TILE - VIEW_W));
+    }
+
+    function px(x, y, w, h, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(Math.round(x), Math.round(y), w, h);
+    }
+
+    function drawSky(theme) {
+      const g = ctx.createLinearGradient(0, 0, 0, VIEW_H);
+      if (theme === "castle") {
+        g.addColorStop(0, "#1e3a8a");
+        g.addColorStop(0.55, "#3b82f6");
+        g.addColorStop(1, "#93c5fd");
+      } else if (theme === "hills") {
+        g.addColorStop(0, "#7dd3fc");
+        g.addColorStop(1, "#38bdf8");
+      } else {
+        g.addColorStop(0, "#67b6ff");
+        g.addColorStop(1, "#5c94fc");
+      }
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+
+      const t = tick * 0.01;
+      if (theme === "castle") {
+        px(268, 16, 12, 12, "#f8fafc");
+        px(266, 18, 16, 8, "#e2e8f0");
+        px(270, 14, 8, 16, "#f8fafc");
+        for (let i = 0; i < 18; i++) {
+          if ((tick + i * 13) % 80 < 40) px((i * 37 + tick * 0.2) % VIEW_W, 8 + (i * 17) % 50, 2, 2, "#fff");
+        }
+      } else {
+        const sunX = 272 + Math.sin(t) * 3;
+        const sunY = 20 + Math.cos(t * 0.8) * 2;
+        px(sunX + 4, sunY, 10, 14, "#ffe14a");
+        px(sunX, sunY + 4, 18, 8, "#ffe14a");
+        px(sunX + 6, sunY + 3, 8, 8, "#fff1a8");
+      }
+
+      clouds.forEach((c) => {
+        const x = c.x - cameraX * (0.12 + c.layer * 0.1);
+        const y = c.y + Math.sin(tick * 0.02 + c.x) * 1.5;
+        px(x, y + 4, 28 * c.s, 8 * c.s, "#fff");
+        px(x + 8 * c.s, y, 18 * c.s, 10 * c.s, "#fff");
+        px(x + 16 * c.s, y + 3, 16 * c.s, 8 * c.s, "#e2e8f0");
+      });
+
+      birds.forEach((b) => {
+        const x = b.x - cameraX * 0.25;
+        const open = Math.sin(b.flap) > 0;
+        px(x, b.y, 3, 1, "#111");
+        px(x + 3, b.y - (open ? 2 : 0), 3, 1, "#111");
+      });
+
+      for (let i = 0; i < 7; i++) {
+        const x = ((i * 92) - cameraX * 0.32) % (VIEW_W + 92) - 30;
+        const top = theme === "hills" ? 132 : 138;
+        const c1 = theme === "castle" ? "#334155" : "#4ade80";
+        const c2 = theme === "castle" ? "#1e293b" : "#22c55e";
+        for (let s = 0; s < 7; s++) {
+          px(x + s * 4, top + s * 4, 56 - s * 8, 4, i % 2 ? c1 : c2);
+        }
+      }
+    }
+
+    function drawBush(x, y) {
+      px(x + 2, y + 6, 20, 10, "#16a34a");
+      px(x + 6, y + 2, 12, 10, "#22c55e");
+      px(x + 8, y + 8, 3, 3, "#14532d");
+    }
+
+    function drawFlower(x, y) {
+      px(x + 6, y + 8, 3, 8, "#16a34a");
+      px(x + 3, y + 2, 9, 8, "#dc2626");
+      px(x + 5, y + 4, 5, 4, "#facc15");
+    }
+
+    function drawPipeTile(sx, sy, isTop) {
+      if (isTop) {
+        px(sx - 1, sy, 34, 5, "#4ade80");
+        px(sx, sy + 4, 32, 12, "#16a34a");
+        px(sx + 5, sy + 5, 4, 10, "#bbf7d0");
+        px(sx + 24, sy + 5, 4, 10, "#14532d");
+      } else {
+        px(sx + 1, sy, 30, 16, "#16a34a");
+        px(sx + 5, sy, 4, 16, "#bbf7d0");
+        px(sx + 24, sy, 4, 16, "#14532d");
+      }
+    }
+
+    function drawBrick(x, y, used) {
+      px(x, y, 16, 16, used ? "#a16207" : "#c2410c");
+      px(x + 1, y + 1, 14, 14, used ? "#ca8a04" : "#ea580c");
+      if (!used) {
+        px(x + 2, y + 3, 5, 4, "#9a3412");
+        px(x + 9, y + 3, 5, 4, "#9a3412");
+        px(x + 2, y + 9, 5, 4, "#9a3412");
+        px(x + 9, y + 9, 5, 4, "#9a3412");
+      }
+    }
+
+    function drawQuestion(x, y) {
+      const bounce = Math.round(Math.sin(tick * 0.2) * 1);
+      px(x, y + bounce, 16, 16, "#ca8a04");
+      px(x + 1, y + 1 + bounce, 14, 14, "#facc15");
+      px(x + 6, y + 3 + bounce, 4, 7, "#78350f");
+      px(x + 6, y + 12 + bounce, 4, 2, "#78350f");
+    }
+
+    function drawGround(x, y, grass) {
+      if (grass) {
+        px(x, y, 16, 16, "#b45309");
+        px(x, y, 16, 7, "#22c55e");
+        px(x, y, 16, 3, "#4ade80");
+        px(x + 3, y + 2, 2, 2, "#86efac");
+        px(x + 10, y + 8, 3, 3, "#7c2d12");
+      } else {
+        px(x, y, 16, 16, "#92400e");
+        px(x + 4, y + 5, 3, 3, "#78350f");
+        px(x + 11, y + 10, 2, 2, "#a16207");
+      }
+    }
+
+    function drawCannon(x, y) {
+      px(x + 2, y + 6, 12, 10, "#111");
+      px(x - 6, y + 4, 14, 10, "#1f2937");
+      px(x - 4, y + 6, 4, 4, "#f8fafc");
+    }
+
+    function drawFlag(f) {
+      const x = f.x - cameraX;
+      px(x + 3, f.y, 3, 80, "#e2e8f0");
+      const wave = Math.sin(tick * 0.15) * 3;
+      ctx.fillStyle = "#dc2626";
+      ctx.beginPath();
+      ctx.moveTo(x + 6, f.y + 4);
+      ctx.lineTo(x + 22 + wave, f.y + 10);
+      ctx.lineTo(x + 6, f.y + 16);
+      ctx.fill();
+      px(x + 2, f.y - 2, 5, 5, "#facc15");
+    }
+
+    function drawCastle(g) {
+      const x = g.x - cameraX, y = g.y;
+      px(x + 6, y + 20, 40, 44, "#b45309");
+      px(x + 4, y + 16, 44, 6, "#7c2d12");
+      px(x + 2, y + 8, 12, 16, "#a16207");
+      px(x + 18, y, 16, 24, "#a16207");
+      px(x + 38, y + 8, 12, 16, "#a16207");
+      px(x + 20, y + 36, 12, 28, "#1c1917");
+      px(x + 8, y + 28, 8, 8, "#0f172a");
+      px(x + 36, y + 28, 8, 8, "#0f172a");
+      px(x + 6, y + 4, 4, 6, "#dc2626");
+      px(x + 22, y - 8, 4, 8, "#dc2626");
+      px(x + 42, y + 4, 4, 6, "#dc2626");
+    }
+
+    function drawPlumber(p) {
+      if (invuln > 0 && Math.floor(invuln / 3) % 2 === 0 && !p.dead) return;
+      const x = Math.round(p.x - cameraX) - 3;
+      const y = Math.round(p.y) - (big ? 2 : 0);
+      const s = big ? 1.4 : 1;
+      const flip = p.dir < 0;
+      ctx.save();
+      ctx.translate(x + 8, 0);
+      ctx.scale(flip ? -1 : 1, 1);
+      ctx.translate(-8, 0);
+      px(2 * s, y, 10 * s, 4 * s, "#dc2626");
+      px(1 * s, y + 2 * s, 12 * s, 3 * s, "#dc2626");
+      px(3 * s, y + 4 * s, 9 * s, 5 * s, "#fecaa3");
+      px(3 * s, y + 5 * s, 3 * s, 2 * s, "#7c2d12");
+      px(8 * s, y + 6 * s, 5 * s, 1 * s, "#7c2d12");
+      px(2 * s, y + 9 * s, 11 * s, 5 * s, "#2563eb");
+      px(4 * s, y + 8 * s, 7 * s, 3 * s, "#dc2626");
+      px(1 * s, y + 10 * s, 3 * s, 3 * s, "#fecaa3");
+      px(11 * s, y + 10 * s, 3 * s, 3 * s, "#fecaa3");
+      const leg = player.onGround && Math.floor(player.frame) % 2 === 0 ? 1 : 0;
+      px(3 * s, y + 14 * s, 4 * s, 3 * s, "#7c2d12");
+      px((7 + leg) * s, y + 14 * s, 4 * s, 3 * s, "#7c2d12");
+      ctx.restore();
+    }
+
+    function drawGoomba(e) {
+      const x = e.x - cameraX, y = e.y + (e.alive ? 0 : 6);
+      const h = e.alive ? 12 : 6;
+      px(x, y, 14, h, "#b45309");
+      px(x + 2, y + 2, 10, h - 4, "#d97706");
+      if (e.alive) {
+        px(x + 3, y + 4, 2, 3, "#111");
+        px(x + 9, y + 4, 2, 3, "#111");
+        px(x + 1, y + 10, 5, 3, "#fde68a");
+        px(x + 8, y + 10, 5, 3, "#fde68a");
+      }
+    }
+
+    function drawBullet(e) {
+      const x = e.x - cameraX, y = e.y;
+      px(x, y, 16, 12, "#111");
+      px(x + 12, y + 2, 4, 8, "#e5e7eb");
+      px(x + 3, y + 3, 4, 4, "#fff");
+      px(x + 4, y + 4, 2, 2, "#111");
+    }
+
+    function drawPlant(p) {
+      const x = p.x - cameraX, y = p.y;
+      px(x + 5, y + 8, 3, 12, "#16a34a");
+      px(x, y, 14, 12, "#dc2626");
+      px(x + 2, y + 2, 3, 3, "#fff");
+      px(x + 8, y + 3, 3, 3, "#fff");
+      px(x + 3, y + 8, 8, 3, "#111");
+      px(x + 4, y + 7, 2, 2, "#fff");
+      px(x + 8, y + 7, 2, 2, "#fff");
+    }
+
+    function drawCoin(c) {
+      const x = c.x - cameraX + Math.sin(c.spin) * 0.2;
+      const slim = Math.abs(Math.cos(c.spin));
+      const w = Math.max(2, 8 * slim);
+      px(x + 4 - w / 2, c.y, w, 10, "#facc15");
+      px(x + 4 - w / 2 + 1, c.y + 2, Math.max(1, w - 2), 6, "#fde68a");
+    }
+
+    function drawMushroom(it) {
+      const x = it.x - cameraX;
+      px(x, it.y, 14, 8, "#dc2626");
+      px(x + 2, it.y + 2, 3, 3, "#fff");
+      px(x + 8, it.y + 2, 3, 3, "#fff");
+      px(x + 3, it.y + 7, 8, 7, "#fed7aa");
+    }
+
+    function drawTiles(theme) {
+      const x0 = Math.max(0, Math.floor(cameraX / TILE) - 1);
+      const x1 = Math.min(cols, x0 + Math.ceil(VIEW_W / TILE) + 2);
+      for (let y = 0; y < rows; y++) {
+        for (let x = x0; x < x1; x++) {
+          const ch = tiles[y][x];
+          const sx = x * TILE - cameraX, sy = y * TILE;
+          if (ch === "G") drawGround(sx, sy, true);
+          else if (ch === "D") drawGround(sx, sy, false);
+          else if (ch === "B") drawBrick(sx, sy, false);
+          else if (ch === "=") drawBrick(sx, sy, true);
+          else if (ch === "?" || ch === "!") drawQuestion(sx, sy);
+          else if (ch === "1") drawPipeTile(sx, sy, tileAt(x, y - 1) !== "1");
+          else if (ch === "Z") drawCannon(sx, sy);
+        }
+      }
+    }
+
+    function drawHud() {
+      updateHud();
+    }
+
+    function draw() {
+      const spec = LEVELS[Math.min(levelIndex, LEVELS.length - 1)];
+      drawSky(spec.theme);
+      decorations.forEach((d) => {
+        const x = d.x - cameraX;
+        if (d.type === "O") drawBush(x, d.y);
+        else drawFlower(x, d.y);
+      });
+      if (flag) drawFlag(flag);
+      if (goal) drawCastle(goal);
+      drawTiles(spec.theme);
+      plants.forEach(drawPlant);
+      coins.forEach((c) => { if (!c.taken) drawCoin(c); });
+      items.forEach((it) => { if (!it.taken) drawMushroom(it); });
+      enemies.forEach((e) => {
+        if (e.type === "bullet") { if (e.alive) drawBullet(e); }
+        else if (e.alive || e.squash > 0) drawGoomba(e);
+      });
+      particles.forEach((p) => px(p.x - cameraX, p.y, p.size, p.size, p.color));
+      if (player) drawPlumber(player);
+      drawHud();
+    }
+
+    let lastTime = performance.now();
+    let frameAcc = 0;
+    function loop(now) {
+      const dt = Math.min(34, now - lastTime);
+      lastTime = now;
+      frameAcc += dt;
+      while (frameAcc >= 1000 / 60) {
+        update();
+        frameAcc -= 1000 / 60;
+      }
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (state === "title") {
+        if (["ArrowUp", "KeyW"].includes(e.code)) {
+          e.preventDefault();
+          menuIndex = (menuIndex + MENU_COUNT - 1) % MENU_COUNT;
+          bip();
+          show(titleHTML());
+        }
+        if (["ArrowDown", "KeyS"].includes(e.code)) {
+          e.preventDefault();
+          menuIndex = (menuIndex + 1) % MENU_COUNT;
+          bip();
+          show(titleHTML());
+        }
+        if (e.code === "Enter" || e.code === "Space") {
+          e.preventDefault();
+          if (menuIndex === 0) confirmNewGame();
+          else if (menuIndex === 1) openBoard();
+          else if (menuIndex === 2) openOptions();
+          else quitToHome();
+        }
+        return;
+      }
+      if ((state === "leaderboard" || state === "options") && ["Escape", "Backspace"].includes(e.code)) {
+        e.preventDefault();
+        showTitle();
+        return;
+      }
+      if (state === "options" && (e.code === "Enter" || e.code === "ArrowLeft" || e.code === "ArrowRight")) {
+        e.preventDefault();
+        if (e.code === "Enter") {
+          showTitle();
+          return;
+        }
+        setControlMode(controlMode === "desktop" ? "mobile" : "desktop");
+        return;
+      }
+      if (state === "leaderboard" && e.code === "Enter") {
+        e.preventDefault();
+        showTitle();
+        return;
+      }
+      KEY[e.code] = true;
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space"].includes(e.code)) e.preventDefault();
+      if (e.code === "Enter" && (state === "gameover" || state === "victory")) confirmNewGame();
+      if (e.code === "KeyP" && state === "playing") {
+        state = "paused";
+        show(pauseHTML());
+      } else if (e.code === "KeyP" && state === "paused") {
+        state = "playing";
+        hideOverlay();
+        updateHud();
+      }
+    });
+    window.addEventListener("keyup", (e) => { KEY[e.code] = false; });
+
+    function bindPad(id, key) {
+      const el = document.getElementById(id);
+      const on = (v) => (ev) => { ev.preventDefault(); PAD[key] = v; el.classList.toggle("held", v); };
+      el.addEventListener("pointerdown", on(true));
+      el.addEventListener("pointerup", on(false));
+      el.addEventListener("pointerleave", on(false));
+      el.addEventListener("pointercancel", on(false));
+    }
+    bindPad("btnL", "left");
+    bindPad("btnR", "right");
+    bindPad("btnJ", "jump");
+
+    parseLevel(LEVELS[0]);
+    state = "title";
+    applyControlMode();
+    show(titleHTML());
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

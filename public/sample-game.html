@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Click Rush</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Arial, sans-serif;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(circle at top, #312e81, #020617 62%);
+        color: white;
+      }
+      .card {
+        width: min(420px, 92vw);
+        padding: 28px;
+        border-radius: 24px;
+        background: rgba(15, 23, 42, 0.88);
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      }
+      button {
+        margin-top: 18px;
+        border: 0;
+        border-radius: 999px;
+        padding: 14px 28px;
+        font-size: 18px;
+        font-weight: 700;
+        color: white;
+        background: #6366f1;
+        cursor: pointer;
+      }
+      .score {
+        font-size: 56px;
+        font-weight: 800;
+        margin: 12px 0 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Click Rush</h1>
+      <p>You have 15 seconds. Click as fast as you can, then send the score to the platform.</p>
+      <p class="score" id="score">0</p>
+      <p id="timer">Time: 15.0s</p>
+      <button id="action">Start</button>
+      <button id="submitScore" type="button" onclick="submitScore()">Submit Score</button>
+    </div>
+    <script>
+      const scoreEl = document.getElementById("score");
+      const timerEl = document.getElementById("timer");
+      const actionEl = document.getElementById("action");
+      let score = 0;
+      let remaining = 15;
+      let running = false;
+      let timerId = null;
+
+      function submitScore() {
+        window.parent.postMessage({
+          type: "GAME_SCORE",
+          score: score
+        }, "*");
+      }
+
+      function reset() {
+        score = 0;
+        remaining = 15;
+        running = false;
+        scoreEl.textContent = "0";
+        timerEl.textContent = "Time: 15.0s";
+        actionEl.textContent = "Start";
+      }
+
+      actionEl.addEventListener("click", () => {
+        if (!running) {
+          running = true;
+          score = 0;
+          remaining = 15;
+          scoreEl.textContent = "0";
+          actionEl.textContent = "Click!";
+          const started = Date.now();
+          timerId = setInterval(() => {
+            remaining = Math.max(0, 15 - (Date.now() - started) / 1000);
+            timerEl.textContent = "Time: " + remaining.toFixed(1) + "s";
+            if (remaining <= 0) {
+              clearInterval(timerId);
+              running = false;
+              actionEl.textContent = "Play again";
+              timerEl.textContent = "Done! Score " + score + " sent to the platform.";
+              submitScore();
+            }
+          }, 50);
+          return;
+        }
+        score += 1;
+        scoreEl.textContent = String(score);
+      });
+
+      reset();
+    </script>
+  </body>
+</html>
