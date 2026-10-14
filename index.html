@@ -15,10 +15,21 @@
       rel="stylesheet"
     />
     <title>SUPER MARIO · Google Leaderboard</title>
-    <script type="module" crossorigin src="/Demo-learderboard-googlelogin/assets/index-BtDvlrYK.js"></script>
+    <script type="module" crossorigin src="/Demo-learderboard-googlelogin/assets/index-BtcySsgw.js"></script>
     <link rel="stylesheet" crossorigin href="/Demo-learderboard-googlelogin/assets/index-m4wbmVyW.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <p id="boot-msg" style="margin:0;padding:24px;font-family:sans-serif;color:#e8eefc">
+        正在開啟 SUPER MARIO...
+      </p>
+    </div>
+    <script>
+      window.addEventListener("error", function () {
+        var el = document.getElementById("boot-msg");
+        if (!el) return;
+        el.textContent = "頁面檔案載入失敗。請按 Ctrl+F5 強制重新整理後再開一次。";
+      });
+    </script>
   </body>
 </html>

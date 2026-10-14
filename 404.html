@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/Demo-learderboard-googlelogin/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Upload Gemini-generated HTML games, play them, and compete on live leaderboards."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Press+Start+2P&family=Syne:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <title>SUPER MARIO · Google Leaderboard</title>
+    <script type="module" crossorigin src="/Demo-learderboard-googlelogin/assets/index-BtcySsgw.js"></script>
+    <link rel="stylesheet" crossorigin href="/Demo-learderboard-googlelogin/assets/index-m4wbmVyW.css">
+  </head>
+  <body>
+    <div id="root">
+      <p id="boot-msg" style="margin:0;padding:24px;font-family:sans-serif;color:#e8eefc">
+        正在開啟 SUPER MARIO...
+      </p>
+    </div>
+    <script>
+      window.addEventListener("error", function () {
+        var el = document.getElementById("boot-msg");
+        if (!el) return;
+        el.textContent = "頁面檔案載入失敗。請按 Ctrl+F5 強制重新整理後再開一次。";
+      });
+    </script>
+  </body>
+</html>
