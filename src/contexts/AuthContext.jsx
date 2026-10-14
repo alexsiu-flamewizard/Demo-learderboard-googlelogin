@@ -1,9 +1,32 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
+import {
+  getRedirectResult,
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut,
+} from "firebase/auth";
 import { auth, googleProvider, isFirebaseConfigured } from "../firebase";
 import { ensureUserDocument } from "../services/userService";
 
 const AuthContext = createContext(null);
+
+function friendlyAuthError(loginError) {
+  const code = loginError?.code || "";
+  if (code === "auth/popup-blocked") {
+    return "瀏覽器擋住了 Google 登入視窗。請允許彈出視窗後再按一次。";
+  }
+  if (code === "auth/unauthorized-domain") {
+    return "這個網址還沒加入 Firebase 的授權網域。";
+  }
+  if (code === "auth/network-request-failed") {
+    return "連不到 Firebase。請檢查網路後再試。";
+  }
+  if (code === "auth/operation-not-allowed") {
+    return "Firebase 還沒有啟用 Google 登入。";
+  }
+  return loginError?.message || "Google 登入失敗。";
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -18,15 +41,20 @@ export function AuthProvider({ children }) {
       return undefined;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setError("");
+    getRedirectResult(auth).catch((redirectError) => {
+      console.error(redirectError);
+      setError(friendlyAuthError(redirectError));
+    });
 
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) {
         setUser(null);
         setUserProfile(null);
         setLoading(false);
         return;
       }
+
+      setError("");
 
       setUser(firebaseUser);
 
@@ -64,7 +92,17 @@ export function AuthProvider({ children }) {
       await signInWithPopup(auth, googleProvider);
     } catch (loginError) {
       console.error(loginError);
-      setError(loginError.message || "Google login failed.");
+      if (loginError?.code === "auth/popup-blocked") {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (redirectError) {
+          console.error(redirectError);
+          setError(friendlyAuthError(redirectError));
+        }
+      } else {
+        setError(friendlyAuthError(loginError));
+      }
     } finally {
       setAuthBusy(false);
     }
